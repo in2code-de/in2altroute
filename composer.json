@@ -1,13 +1,14 @@
 {
     "name": "in2code/in2altroute",
     "description": "TYPO3 extension to support speaking urls without a subdomain or fixed path segment",
+    "license": "GPL-3.0-only",
+    "type": "typo3-cms-extension",
     "authors": [
         {
             "name": "Oliver Eglseder",
             "email": "oliver.eglseder@in2code.de"
         }
     ],
-    "type": "typo3-cms-extension",
     "autoload": {
         "psr-4": {
             "In2code\\In2altroute\\": "Classes"
