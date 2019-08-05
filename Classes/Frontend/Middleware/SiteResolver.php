@@ -129,7 +129,8 @@ class SiteResolver implements MiddlewareInterface
         if (!($language instanceof SiteLanguage)) {
             // FIXME: START
             $path = $request->getUri()->getPath();
-            if (!empty(trim($path, '/'))) {
+            $path = preg_replace('/(^\/)|(\/$)|(\/(?!.*\/).*\..*)/', '$1', $path); // allow / or filename after slug
+            if (!empty($path)) {
                 $queryBuilder = GeneralUtility::makeInstance(ConnectionPool::class)->getQueryBuilderForTable('pages');
                 $queryBuilder->getRestrictions()->removeAll()->add(new FrontendRestrictionContainer());
                 $queryBuilder->select('*')
@@ -142,30 +143,32 @@ class SiteResolver implements MiddlewareInterface
                     $sites[$site->getIdentifier()] = $site;
                 }
                 $collection = $this->getRouteCollectionForSites($sites);
-                $context = new RequestContext(
-                    '',
-                    $request->getMethod(),
-                    HttpUtility::idn_to_ascii($request->getUri()->getHost()),
-                    $request->getUri()->getScheme(),
-                    // Ports are only necessary for URL generation in Symfony which is not used by TYPO3
-                    80,
-                    443,
-                    $request->getUri()->getPath()
-                );
-                $matcher = new UrlMatcher($collection, $context);
-                try {
-                    $result = $matcher->match($request->getUri()->getPath());
-                    return new SiteRouteResult(
-                        $request->getUri(),
-                        $result['site'],
-                        // if no language is found, this usually results due to "/" called instead of "/fr/"
-                        // but it could also be the reason that "/index.php?id=23" was called, so the default
-                        // language is used as a fallback here then.
-                        $result['language'] ?? $defaultLanguage,
-                        $result['tail']
+                if (!empty($collection)) {
+                    $context = new RequestContext(
+                        '',
+                        $request->getMethod(),
+                        HttpUtility::idn_to_ascii($request->getUri()->getHost()),
+                        $request->getUri()->getScheme(),
+                        // Ports are only necessary for URL generation in Symfony which is not used by TYPO3
+                        80,
+                        443,
+                        $request->getUri()->getPath()
                     );
-                } catch (NoConfigurationException | ResourceNotFoundException $e) {
-                    // No site+language combination found so far
+                    $matcher = new UrlMatcher($collection, $context);
+                    try {
+                        $result = $matcher->match($request->getUri()->getPath());
+                        return new SiteRouteResult(
+                            $request->getUri(),
+                            $result['site'],
+                            // if no language is found, this usually results due to "/" called instead of "/fr/"
+                            // but it could also be the reason that "/index.php?id=23" was called, so the default
+                            // language is used as a fallback here then.
+                            $result['language'] ?? $defaultLanguage,
+                            $result['tail']
+                        );
+                    } catch (NoConfigurationException | ResourceNotFoundException $e) {
+                        // No site+language combination found so far
+                    }
                 }
             }
             // FIXME: END

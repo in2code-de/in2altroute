@@ -12,5 +12,10 @@
         "psr-4": {
             "In2code\\In2altroute\\": "Classes"
         }
+    },
+    "extra": {
+        "branch-alias": {
+            "dev-master": "1.0.x-dev"
+        }
     }
 }
