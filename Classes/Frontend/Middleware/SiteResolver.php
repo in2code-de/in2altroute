@@ -129,7 +129,7 @@ class SiteResolver implements MiddlewareInterface
         if (!($language instanceof SiteLanguage)) {
             // FIXME: START
             $path = $request->getUri()->getPath();
-            $path = preg_replace('/(^\/)|(\/$)|(\/(?!.*\/).*\..*)/', '$1', $path); // allow / or filename after slug
+            $path = preg_replace('#(((?<=.)/)|())([^/]+?\.[^/]+?$)|((?<=[^/])/$)#', '', $path); // allow / or filename after slug
             if (!empty($path)) {
                 $queryBuilder = GeneralUtility::makeInstance(ConnectionPool::class)->getQueryBuilderForTable('pages');
                 $queryBuilder->getRestrictions()->removeAll()->add(new FrontendRestrictionContainer());
@@ -156,7 +156,7 @@ class SiteResolver implements MiddlewareInterface
                     );
                     $matcher = new UrlMatcher($collection, $context);
                     try {
-                        $result = $matcher->match($request->getUri()->getPath());
+                        $result = $matcher->match($path);
                         return new SiteRouteResult(
                             $request->getUri(),
                             $result['site'],
