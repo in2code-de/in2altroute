@@ -132,7 +132,6 @@ class SiteResolver implements MiddlewareInterface
             $path = preg_replace('/(^\/)|(\/$)|(\/(?!.*\/).*\..*)/', '$1', $path); // allow / or filename after slug
             if (!empty($path)) {
                 $queryBuilder = GeneralUtility::makeInstance(ConnectionPool::class)->getQueryBuilderForTable('pages');
-                $queryBuilder->getRestrictions()->removeAll()->add(new FrontendRestrictionContainer());
                 $queryBuilder->select('*')
                              ->from('pages')
                              ->where($queryBuilder->expr()->eq('slug', $queryBuilder->createNamedParameter($path)));
