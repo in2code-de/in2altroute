@@ -128,7 +128,12 @@ class SiteResolver implements MiddlewareInterface
         // on the incoming URL.
         if (!($language instanceof SiteLanguage)) {
             // FIXME: START
+            $filename = '';
             $path = $request->getUri()->getPath();
+            $pathinfo = pathinfo($path);
+            if(isset($pathinfo['extension'])) {
+                $filename = '/' . $pathinfo['basename'];
+            }
             $path = preg_replace('#(((?<=.)/)?)([^/]+?\.[^/]+?$)|((?<=[^/])/$)#', '', $path); // allow / or filename after slug
             if (!empty($path)) {
                 $queryBuilder = GeneralUtility::makeInstance(ConnectionPool::class)->getQueryBuilderForTable('pages');
@@ -163,7 +168,7 @@ class SiteResolver implements MiddlewareInterface
                             // but it could also be the reason that "/index.php?id=23" was called, so the default
                             // language is used as a fallback here then.
                             $result['language'] ?? $defaultLanguage,
-                            $result['tail']
+                            $result['tail'] . $filename
                         );
                     } catch (NoConfigurationException | ResourceNotFoundException $e) {
                         // No site+language combination found so far
