@@ -128,11 +128,15 @@ class SiteResolver implements MiddlewareInterface
         // on the incoming URL.
         if (!($language instanceof SiteLanguage)) {
             // FIXME: START
+            $filename = '';
             $path = $request->getUri()->getPath();
-            $path = preg_replace('/(^\/)|(\/$)|(\/(?!.*\/).*\..*)/', '$1', $path); // allow / or filename after slug
+            $pathinfo = pathinfo($path);
+            if(isset($pathinfo['extension'])) {
+                $filename = '/' . $pathinfo['basename'];
+            }
+            $path = preg_replace('#(((?<=.)/)?)([^/]+?\.[^/]+?$)|((?<=[^/])/$)#', '', $path); // allow / or filename after slug
             if (!empty($path)) {
                 $queryBuilder = GeneralUtility::makeInstance(ConnectionPool::class)->getQueryBuilderForTable('pages');
-                $queryBuilder->getRestrictions()->removeAll()->add(new FrontendRestrictionContainer());
                 $queryBuilder->select('*')
                              ->from('pages')
                              ->where($queryBuilder->expr()->eq('slug', $queryBuilder->createNamedParameter($path)));
@@ -156,7 +160,7 @@ class SiteResolver implements MiddlewareInterface
                     );
                     $matcher = new UrlMatcher($collection, $context);
                     try {
-                        $result = $matcher->match($request->getUri()->getPath());
+                        $result = $matcher->match($path);
                         return new SiteRouteResult(
                             $request->getUri(),
                             $result['site'],
@@ -164,7 +168,7 @@ class SiteResolver implements MiddlewareInterface
                             // but it could also be the reason that "/index.php?id=23" was called, so the default
                             // language is used as a fallback here then.
                             $result['language'] ?? $defaultLanguage,
-                            $result['tail']
+                            $result['tail'] . $filename
                         );
                     } catch (NoConfigurationException | ResourceNotFoundException $e) {
                         // No site+language combination found so far
