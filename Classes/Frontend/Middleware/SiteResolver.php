@@ -1,6 +1,7 @@
 <?php
 
 declare(strict_types=1);
+
 namespace In2code\In2altroute\Frontend\Middleware;
 
 use Psr\Http\Message\ResponseInterface;
@@ -11,14 +12,12 @@ use Symfony\Component\Routing\Exception\NoConfigurationException;
 use Symfony\Component\Routing\Exception\ResourceNotFoundException;
 use Symfony\Component\Routing\Matcher\UrlMatcher;
 use Symfony\Component\Routing\RequestContext;
-use TYPO3\CMS\Core\Cache\CacheManager;
 use TYPO3\CMS\Core\Database\ConnectionPool;
 use TYPO3\CMS\Core\Exception\SiteNotFoundException;
 use TYPO3\CMS\Core\Routing\Route;
 use TYPO3\CMS\Core\Routing\RouteCollection;
 use TYPO3\CMS\Core\Routing\RouteResultInterface;
 use TYPO3\CMS\Core\Routing\SiteRouteResult;
-use TYPO3\CMS\Core\SingletonInterface;
 use TYPO3\CMS\Core\Site\Entity\NullSite;
 use TYPO3\CMS\Core\Site\Entity\Site;
 use TYPO3\CMS\Core\Site\Entity\SiteInterface;
@@ -26,7 +25,6 @@ use TYPO3\CMS\Core\Site\Entity\SiteLanguage;
 use TYPO3\CMS\Core\Site\SiteFinder;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
 use TYPO3\CMS\Core\Utility\HttpUtility;
-use TYPO3\CMS\Core\Utility\RootlineUtility;
 
 class SiteResolver implements MiddlewareInterface
 {
@@ -79,6 +77,7 @@ class SiteResolver implements MiddlewareInterface
      * a sys_domain record, and match against them.
      *
      * @param ServerRequestInterface $request
+     *
      * @return RouteResultInterface
      */
     public function matchRequest(ServerRequestInterface $request): RouteResultInterface
@@ -118,15 +117,21 @@ class SiteResolver implements MiddlewareInterface
             $filename = '';
             $path = $request->getUri()->getPath();
             $pathinfo = pathinfo($path);
-            if(isset($pathinfo['extension'])) {
+            if (isset($pathinfo['extension'])) {
                 $filename = '/' . $pathinfo['basename'];
             }
-            $path = preg_replace('#(((?<=.)/)?)([^/]+?\.[^/]+?$)|((?<=[^/])/$)#', '', $path); // allow / or filename after slug
+
+            // allow / or filename after slug
+            $path = preg_replace(
+                '#(((?<=.)/)?)([^/]+?\.[^/]+?$)|((?<=[^/])/$)#',
+                '',
+                $path
+            );
             if (!empty($path)) {
                 $queryBuilder = GeneralUtility::makeInstance(ConnectionPool::class)->getQueryBuilderForTable('pages');
                 $queryBuilder->select('*')
-                    ->from('pages')
-                    ->where($queryBuilder->expr()->eq('slug', $queryBuilder->createNamedParameter($path)));
+                             ->from('pages')
+                             ->where($queryBuilder->expr()->eq('slug', $queryBuilder->createNamedParameter($path)));
                 $pagesStatement = $queryBuilder->execute();
                 $sites = [];
                 while ($row = $pagesStatement->fetch()) {
@@ -163,7 +168,6 @@ class SiteResolver implements MiddlewareInterface
                 }
             }
             // FIXME: END
-
 
             $collection = $this->getRouteCollectionForAllSites();
             $context = new RequestContext(
@@ -205,6 +209,7 @@ class SiteResolver implements MiddlewareInterface
      *
      * @param int $pageId uid of a page in default language
      * @param array|null $rootLine an alternative root line, if already at and.
+     *
      * @return SiteInterface
      * @throws SiteNotFoundException
      */
@@ -226,10 +231,13 @@ class SiteResolver implements MiddlewareInterface
     {
         $groupedRoutes = [];
         foreach ($this->siteFinder->getAllSites() as $site) {
-            // Add the site as entrypoint
             $uri = $site->getBase();
+            $routeKey = ($uri->getScheme() ?: '-') . ($uri->getHost() ?: '-');
+            $routePath = $uri->getPath() ?: '/';
+
+            // Add the site as entry point
             $route = new Route(
-                ($uri->getPath() ?: '/') . '{tail}',
+                $routePath . '{tail}',
                 ['site' => $site, 'language' => null, 'tail' => ''],
                 array_filter(['tail' => '.*', 'port' => (string)$uri->getPort()]),
                 ['utf8' => true],
@@ -237,12 +245,12 @@ class SiteResolver implements MiddlewareInterface
                 $uri->getScheme()
             );
             $identifier = 'site_' . $site->getIdentifier();
-            $groupedRoutes[($uri->getScheme() ?: '-') . ($uri->getHost() ?: '-')][$uri->getPath() ?: '/'][$identifier] = $route;
+            $groupedRoutes[$routeKey][$routePath][$identifier] = $route;
             // Add all languages
             foreach ($site->getAllLanguages() as $siteLanguage) {
                 $uri = $siteLanguage->getBase();
                 $route = new Route(
-                    ($uri->getPath() ?: '/') . '{tail}',
+                    $routePath . '{tail}',
                     ['site' => $site, 'language' => $siteLanguage, 'tail' => ''],
                     array_filter(['tail' => '.*', 'port' => (string)$uri->getPort()]),
                     ['utf8' => true],
@@ -250,7 +258,7 @@ class SiteResolver implements MiddlewareInterface
                     $uri->getScheme()
                 );
                 $identifier = 'site_' . $site->getIdentifier() . '_' . $siteLanguage->getLanguageId();
-                $groupedRoutes[($uri->getScheme() ?: '-') . ($uri->getHost() ?: '-')][$uri->getPath() ?: '/'][$identifier] = $route;
+                $groupedRoutes[$routeKey][$routePath][$identifier] = $route;
             }
         }
         return $this->createRouteCollectionFromGroupedRoutes($groupedRoutes);
@@ -267,10 +275,12 @@ class SiteResolver implements MiddlewareInterface
     {
         $groupedRoutes = [];
         foreach ($sites as $site) {
-            // Add the site as entrypoint
             $uri = $site->getBase();
+            $routeKey = ($uri->getScheme() ?: '-') . ($uri->getHost() ?: '-');
+            $routePath = $uri->getPath() ?: '/';
+            // Add the site as entry point
             $route = new Route(
-                ($uri->getPath() ?: '/') . '{tail}',
+                $routePath . '{tail}',
                 ['site' => $site, 'language' => null, 'tail' => ''],
                 array_filter(['tail' => '.*', 'port' => (string)$uri->getPort()]),
                 ['utf8' => true],
@@ -278,13 +288,12 @@ class SiteResolver implements MiddlewareInterface
                 $uri->getScheme()
             );
             $identifier = 'site_' . $site->getIdentifier();
-            $groupedRoutes[($uri->getScheme() ?: '-') . ($uri->getHost() ?: '-')][$uri->getPath() ?:
-                '/'][$identifier] = $route;
+            $groupedRoutes[$routeKey][$routePath][$identifier] = $route;
             // Add all languages
             foreach ($site->getAllLanguages() as $siteLanguage) {
                 $uri = $siteLanguage->getBase();
                 $route = new Route(
-                    ($uri->getPath() ?: '/') . '{tail}',
+                    $routePath . '{tail}',
                     ['site' => $site, 'language' => $siteLanguage, 'tail' => ''],
                     array_filter(['tail' => '.*', 'port' => (string)$uri->getPort()]),
                     ['utf8' => true],
@@ -292,8 +301,7 @@ class SiteResolver implements MiddlewareInterface
                     $uri->getScheme()
                 );
                 $identifier = 'site_' . $site->getIdentifier() . '_' . $siteLanguage->getLanguageId();
-                $groupedRoutes[($uri->getScheme() ?: '-') . ($uri->getHost() ?: '-')][$uri->getPath() ?:
-                    '/'][$identifier] = $route;
+                $groupedRoutes[$routeKey][$routePath][$identifier] = $route;
             }
         }
         return $this->createRouteCollectionFromGroupedRoutes($groupedRoutes);
@@ -304,6 +312,7 @@ class SiteResolver implements MiddlewareInterface
      * most specific part matches first.
      *
      * @param array $groupedRoutes
+     *
      * @return RouteCollection
      */
     protected function createRouteCollectionFromGroupedRoutes(array $groupedRoutes): RouteCollection
@@ -322,5 +331,4 @@ class SiteResolver implements MiddlewareInterface
         }
         return $collection;
     }
-
 }
