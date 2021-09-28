@@ -14,6 +14,7 @@ use Symfony\Component\Routing\Matcher\UrlMatcher;
 use Symfony\Component\Routing\RequestContext;
 use TYPO3\CMS\Core\Database\ConnectionPool;
 use TYPO3\CMS\Core\Exception\SiteNotFoundException;
+use TYPO3\CMS\Core\Localization\Locales;
 use TYPO3\CMS\Core\Routing\Route;
 use TYPO3\CMS\Core\Routing\RouteCollection;
 use TYPO3\CMS\Core\Routing\RouteResultInterface;
@@ -58,7 +59,10 @@ class SiteResolver implements MiddlewareInterface
         $request = $request->withAttribute('site', $routeResult->getSite());
         $request = $request->withAttribute('language', $routeResult->getLanguage());
         $request = $request->withAttribute('routing', $routeResult);
-
+        if ($routeResult->getLanguage() instanceof SiteLanguage) {
+            Locales::setSystemLocaleFromSiteLanguage($routeResult->getLanguage());
+        }
+        
         // At this point, we later get further route modifiers
         // for bw-compat we update $GLOBALS[TYPO3_REQUEST] to be used later in TSFE.
         $GLOBALS['TYPO3_REQUEST'] = $request;
