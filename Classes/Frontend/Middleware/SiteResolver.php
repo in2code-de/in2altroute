@@ -25,7 +25,6 @@ use TYPO3\CMS\Core\Site\Entity\SiteInterface;
 use TYPO3\CMS\Core\Site\Entity\SiteLanguage;
 use TYPO3\CMS\Core\Site\SiteFinder;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
-use TYPO3\CMS\Core\Utility\HttpUtility;
 
 class SiteResolver implements MiddlewareInterface
 {
@@ -147,7 +146,7 @@ class SiteResolver implements MiddlewareInterface
                     $context = new RequestContext(
                         '',
                         $request->getMethod(),
-                        HttpUtility::idn_to_ascii($request->getUri()->getHost()),
+                        idn_to_ascii($request->getUri()->getHost()),
                         $request->getUri()->getScheme(),
                         // Ports are only necessary for URL generation in Symfony which is not used by TYPO3
                         80,
@@ -177,7 +176,7 @@ class SiteResolver implements MiddlewareInterface
             $context = new RequestContext(
                 '',
                 $request->getMethod(),
-                HttpUtility::idn_to_ascii($request->getUri()->getHost()),
+                idn_to_ascii($request->getUri()->getHost()),
                 $request->getUri()->getScheme(),
                 // Ports are only necessary for URL generation in Symfony which is not used by TYPO3
                 80,
@@ -258,7 +257,7 @@ class SiteResolver implements MiddlewareInterface
                     ['site' => $site, 'language' => $siteLanguage, 'tail' => ''],
                     array_filter(['tail' => '.*', 'port' => (string)$uri->getPort()]),
                     ['utf8' => true],
-                    HttpUtility::idn_to_ascii($uri->getHost()) ?: '',
+                    idn_to_ascii($uri->getHost()) ?: '',
                     $uri->getScheme()
                 );
                 $identifier = 'site_' . $site->getIdentifier() . '_' . $siteLanguage->getLanguageId();
@@ -301,7 +300,7 @@ class SiteResolver implements MiddlewareInterface
                     ['site' => $site, 'language' => $siteLanguage, 'tail' => ''],
                     array_filter(['tail' => '.*', 'port' => (string)$uri->getPort()]),
                     ['utf8' => true],
-                    HttpUtility::idn_to_ascii($uri->getHost()) ?: '',
+                    idn_to_ascii($uri->getHost()) ?: '',
                     $uri->getScheme()
                 );
                 $identifier = 'site_' . $site->getIdentifier() . '_' . $siteLanguage->getLanguageId();
