@@ -137,7 +137,7 @@ class SiteResolver implements MiddlewareInterface
                              ->where($queryBuilder->expr()->eq('slug', $queryBuilder->createNamedParameter($path)));
                 $pagesStatement = $queryBuilder->execute();
                 $sites = [];
-                while ($row = $pagesStatement->fetch()) {
+                while ($row = $pagesStatement->fetchAssociative()) {
                     $site = $this->siteFinder->getSiteByPageId($row['uid']);
                     $sites[$site->getIdentifier()] = $site;
                 }
